@@ -6,13 +6,6 @@
 		<MASTER_PAD_INFO>Portable Application Description, or PAD for short, is a data set that is used by shareware authors to disseminate information to anyone interested in their software products. To find out more go to http://www.asp-shareware.org/pad</MASTER_PAD_INFO>
 	</MASTER_PAD_VERSION_INFO>
 	<Company_Info>
-		<Company_Name>Jellycan</Company_Name>
-		<Address_1>PO Box 218</Address_1>
-		<Address_2 />
-		<City_Town>Scarborough</City_Town>
-		<State_Province>QLD</State_Province>
-		<Zip_Postal_Code>4120</Zip_Postal_Code>
-		<Country>Australia</Country>
 		<Company_WebSite_URL>http://code.jellycan.com/</Company_WebSite_URL>
 		<Contact_Info>
 			<Author_First_Name>Brodie</Author_First_Name>
