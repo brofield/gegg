@@ -65,16 +65,20 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_AUS
 //
 
 IDD_GEGG DIALOGEX 0, 0, 170, 55
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_MINIMIZEBOX | WS_POPUP | WS_CAPTION | WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_MINIMIZEBOX | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
 CAPTION "gegg"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     EDITTEXT        IDC_MINS,7,7,26,14,ES_AUTOHSCROLL | ES_NUMBER
     EDITTEXT        IDC_SECS,56,7,26,14,ES_AUTOHSCROLL | ES_NUMBER
     PUSHBUTTON      "Start",IDC_START,107,7,54,14
-    CONTROL         "Play sound on alarm",IDC_SOUND,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,26,78,10
-    CONTROL         "Message box on alarm",IDC_MSGBOX,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,38,83,10
-    CONTROL         "Minimize to tray",IDC_USETRAY,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,95,26,62,10
+    CONTROL         "Play sound on alarm",IDC_SOUND,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,7,26,78,10
+    CONTROL         "Message box on alarm",IDC_MSGBOX,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,7,38,83,10
+    CONTROL         "Minimize to tray",IDC_USETRAY,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,95,26,62,10
     LTEXT           "mins",IDC_STATIC,36,10,15,8
     LTEXT           "secs",IDC_STATIC,85,10,15,8
 END
@@ -154,6 +158,7 @@ END
 //
 
 IDR_AHEM                WAVE                    "ahem.wav"
+IDR_HELLO               WAVE                    "helloo.wav"
 #endif    // English (Australia) resources
 /////////////////////////////////////////////////////////////////////////////
 

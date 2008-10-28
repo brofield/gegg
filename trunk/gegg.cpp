@@ -463,25 +463,37 @@ BOOL OnTimer(WPARAM wParam, LPARAM lParam)
     }
 
     if (wParam == TIMERID_SOUND) {
-        PlaySound(NULL, NULL, SND_NODEFAULT);
-        PlaySound((LPCTSTR) IDR_AHEM, g_hInstance, SND_RESOURCE | SND_NODEFAULT | SND_ASYNC);
-
-        // when generated more than once, sound it twice a little overlapped 
-        // for a double whammy effect
-        if (g_nSoundCount > 0) { 
-            Sleep(500);
-            PlaySound((LPCTSTR) IDR_AHEM, g_hInstance, SND_RESOURCE | SND_NODEFAULT | SND_ASYNC);
-        }
-
-        // increase the amount of time before we play the sound each time and
-        // set a maximum on the number of times we play it.
         ++g_nSoundCount;
-        if (g_nSoundCount >= 5) {
+
+        switch (g_nSoundCount) {
+        case 1:
+            PlaySound(NULL, NULL, SND_NODEFAULT);
+            PlaySound((LPCTSTR) IDR_AHEM, g_hInstance, SND_RESOURCE | SND_NODEFAULT | SND_ASYNC);
+            SetTimer(g_hwnd, TIMERID_SOUND, TIMERDELAY_SOUND, NULL);
+            break;
+
+        case 2:
+            PlaySound(NULL, NULL, SND_NODEFAULT);
+            PlaySound((LPCTSTR) IDR_AHEM, g_hInstance, SND_RESOURCE | SND_NODEFAULT | SND_ASYNC);
+            SetTimer(g_hwnd, TIMERID_SOUND, 500, NULL); // play the next ahem soon after
+            break;
+
+        case 3:
+            // don't clear the sound
+            PlaySound((LPCTSTR) IDR_AHEM, g_hInstance, SND_RESOURCE | SND_NODEFAULT | SND_ASYNC);
+            SetTimer(g_hwnd, TIMERID_SOUND, TIMERDELAY_SOUND * 2, NULL);
+            break;
+
+        case 4:
+            KillTimer(g_hwnd, TIMERID_SOUND);
+            PlaySound(NULL, NULL, SND_NODEFAULT);
+            PlaySound((LPCTSTR) IDR_HELLO, g_hInstance, SND_RESOURCE | SND_NODEFAULT | SND_ASYNC);
+            break;
+
+        default:
             KillTimer(g_hwnd, TIMERID_SOUND);
         }
-        else {
-            SetTimer(g_hwnd, TIMERID_SOUND, TIMERDELAY_SOUND * g_nSoundCount, NULL);
-        }
+
         return TRUE;
     }
 
