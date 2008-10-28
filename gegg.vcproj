@@ -5,16 +5,11 @@
 	Name="gegg"
 	ProjectGUID="{FE9794D6-6191-45D1-8C2A-B332FDC96D6A}"
 	RootNamespace="gegg"
-	Keyword="Win32Proj"
-	TargetFrameworkVersion="196613"
-	>
+	Keyword="Win32Proj">
 	<Platforms>
 		<Platform
-			Name="Win32"
-		/>
+			Name="Win32"/>
 	</Platforms>
-	<ToolFiles>
-	</ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
@@ -22,71 +17,45 @@
 			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="2"
-			WholeProgramOptimization="0"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
+			WholeProgramOptimization="FALSE">
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS"
-				MinimalRebuild="true"
+				MinimalRebuild="TRUE"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				DebugInformationFormat="4"
-			/>
+				DebugInformationFormat="4"/>
 			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
+				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
 				LinkIncremental="2"
-				GenerateDebugInformation="true"
+				GenerateDebugInformation="TRUE"
 				SubSystem="2"
-				TargetMachine="1"
-			/>
+				TargetMachine="1"/>
 			<Tool
-				Name="VCALinkTool"
-			/>
+				Name="VCMIDLTool"/>
 			<Tool
-				Name="VCManifestTool"
-			/>
+				Name="VCPostBuildEventTool"/>
 			<Tool
-				Name="VCXDCMakeTool"
-			/>
+				Name="VCPreBuildEventTool"/>
 			<Tool
-				Name="VCBscMakeTool"
-			/>
+				Name="VCPreLinkEventTool"/>
 			<Tool
-				Name="VCFxCopTool"
-			/>
+				Name="VCResourceCompilerTool"/>
 			<Tool
-				Name="VCAppVerifierTool"
-			/>
+				Name="VCWebServiceProxyGeneratorTool"/>
 			<Tool
-				Name="VCPostBuildEventTool"
-			/>
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
@@ -94,74 +63,48 @@
 			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="2"
-			WholeProgramOptimization="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
+			WholeProgramOptimization="TRUE">
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="1"
-				EnableIntrinsicFunctions="true"
+				EnableIntrinsicFunctions="TRUE"
 				FavorSizeOrSpeed="2"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS"
 				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="true"
+				EnableFunctionLevelLinking="TRUE"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				DebugInformationFormat="3"
-			/>
+				DebugInformationFormat="3"/>
 			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
+				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
 				LinkIncremental="1"
-				GenerateDebugInformation="true"
+				GenerateDebugInformation="TRUE"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
-				TargetMachine="1"
-			/>
+				TargetMachine="1"/>
 			<Tool
-				Name="VCALinkTool"
-			/>
+				Name="VCMIDLTool"/>
 			<Tool
-				Name="VCManifestTool"
-			/>
+				Name="VCPostBuildEventTool"/>
 			<Tool
-				Name="VCXDCMakeTool"
-			/>
+				Name="VCPreBuildEventTool"/>
 			<Tool
-				Name="VCBscMakeTool"
-			/>
+				Name="VCPreLinkEventTool"/>
 			<Tool
-				Name="VCFxCopTool"
-			/>
+				Name="VCResourceCompilerTool"/>
 			<Tool
-				Name="VCAppVerifierTool"
-			/>
+				Name="VCWebServiceProxyGeneratorTool"/>
 			<Tool
-				Name="VCPostBuildEventTool"
-			/>
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
 		</Configuration>
 	</Configurations>
 	<References>
@@ -170,43 +113,37 @@
 		<Filter
 			Name="Source Files"
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
-			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
-			>
+			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}">
 			<File
-				RelativePath=".\gegg.cpp"
-				>
+				RelativePath=".\gegg.cpp">
 			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
-			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
-			>
+			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}">
 			<File
-				RelativePath=".\resource.h"
-				>
+				RelativePath=".\resource.h">
 			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
-			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
-			>
+			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}">
 			<File
-				RelativePath=".\ahem.wav"
-				>
+				RelativePath=".\ahem.wav">
 			</File>
 			<File
-				RelativePath=".\gegg.ico"
-				>
+				RelativePath=".\gegg.ico">
 			</File>
 			<File
-				RelativePath=".\gegg.png"
-				>
+				RelativePath=".\gegg.png">
 			</File>
 			<File
-				RelativePath=".\gegg.rc"
-				>
+				RelativePath=".\gegg.rc">
+			</File>
+			<File
+				RelativePath=".\helloo.wav">
 			</File>
 		</Filter>
 	</Files>
