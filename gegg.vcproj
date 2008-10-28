@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="shift_jis"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9.00"
+	Version="7.10"
 	Name="gegg"
 	ProjectGUID="{FE9794D6-6191-45D1-8C2A-B332FDC96D6A}"
 	RootNamespace="gegg"

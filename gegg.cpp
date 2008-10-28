@@ -119,10 +119,10 @@ void SetDurationText(DWORD dwDuration, bool bTitleBar)
 
     TCHAR szBuf[50];
     if (bTitleBar) {
-        _sntprintf_s(szBuf, ARRAYLEN(szBuf), APPTITLE_FORMAT, dwMins, dwSecs);
+        _sntprintf(szBuf, ARRAYLEN(szBuf), APPTITLE_FORMAT, dwMins, dwSecs);
     }
     else {
-        _tcscpy_s(szBuf, APPTITLE);
+        _tcscpy(szBuf, APPTITLE);
     }
     SetWindowText(g_hwnd, szBuf);
     
@@ -309,7 +309,7 @@ void AddTrayIcon()
     nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
     nid.uCallbackMessage = WM_GEGG_TRAYMSG;
     nid.hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_GEGG));
-    _tcscpy_s(nid.szTip, APPTITLE);
+    _tcscpy(nid.szTip, APPTITLE);
 
     Shell_NotifyIcon(NIM_ADD, &nid);
 }
@@ -382,7 +382,7 @@ void UpdateTrayIconTooltip(LPCTSTR pszTitle)
     nid.hWnd = g_hwnd;
     nid.uID = IDI_GEGG;
     nid.uFlags = NIF_TIP;
-    _tcscpy_s(nid.szTip, pszTitle);
+    _tcscpy(nid.szTip, pszTitle);
 
     Shell_NotifyIcon(NIM_MODIFY, &nid);
 }
@@ -650,8 +650,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pCmdLine, 
     SystemParametersInfo(SPI_GETANIMATION, sizeof(ai), &ai, 0);
     g_bEnableAnimation = (ai.iMinAnimate != 0);
 
+    g_bClientAreaAnimation = TRUE;
+#ifdef SPI_GETCLIENTAREAANIMATION
     SystemParametersInfo(SPI_GETCLIENTAREAANIMATION, 
         sizeof(g_bClientAreaAnimation), &g_bClientAreaAnimation, 0);
+#endif
 
     g_brush = CreateSolidBrush(FLASH_COLOR);
 
