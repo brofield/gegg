@@ -1,4 +1,27 @@
+/*
+Copyright (c) 2008 Brodie Thiesfield
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+
 #define WIN32_LEAN_AND_MEAN
+
 #define _WIN32_WINNT    0x0500  // Windows 2000
 #define WINVER          0x0500  // Windows 2000
 #define _WIN32_IE       0x0500  // Internet Explorer 5.0
@@ -12,22 +35,30 @@
 
 #pragma comment(lib, "winmm.lib")
 
-#define TIMERID                 1
+#define TIMERID_COUNTDOWN       1
+#define TIMERID_FLASH           2
+#define TIMERID_SOUND           3
+
+#define TIMERDELAY_FLASH        500
+#define TIMERDELAY_SOUND        10*1000
+
 #define ARRAYLEN(x)             (sizeof(x)/sizeof((x)[0]))
 
 #define REGKEY_GEGG             _T("SOFTWARE\\Jellycan\\Gegg")
 #define REGVAL_DURATION         _T("Duration")
 #define REGVAL_ALARM_MSGBOX     _T("AlarmMsgBox")
-#define REGVAL_ALARM_FRONT      _T("AlarmBringToFront")
+#define REGVAL_ALARM_FLASH      _T("AlarmFlash")
 #define REGVAL_ALARM_SOUND      _T("AlarmSound")
 
-#define APPTITLE                _T("gegg")
-#define APPTITLE_FORMAT         _T("%u:%02u - gegg")
+#define APPTITLE                _T("The Good Egg")
+#define APPTITLE_FORMAT         _T("%u:%02u - The Good Egg")
 
 #define MSG_STARTBUTTON         _T("Start")
 #define MSG_STOPBUTTON          _T("Stop")
-#define MSG_ALARM               _T("Time is up!")
+#define MSG_ALARM               _T("Time to go.")
 #define MSG_INVALIDTIME         _T("Invalid duration")
+
+#define FLASH_COLOR             RGB(255,0,0)
 
 
 // globals
@@ -35,7 +66,18 @@ HINSTANCE   g_hInstance = NULL;
 HWND        g_hwnd = NULL;
 DWORD       g_dwTimerStart = 0;
 DWORD       g_dwTimerDuration = 0;
+BOOL        g_bShowRed = FALSE;
+HBRUSH      g_brush = NULL;
+BOOL        g_bIsAlarmSounding = TRUE;
+int         g_nSoundCount = 0;
 
+// forward dec
+BOOL OnTimer(WPARAM wParam, LPARAM lParam);
+void OnStopTiming();
+
+const static int g_rgControl[] = {
+    IDC_MINS, IDC_SECS, IDC_MSGBOX, IDC_SOUND
+};
 
 bool IsChecked(int id) {
     return SendDlgItemMessage(g_hwnd, id, BM_GETCHECK, 0, 0) == BST_CHECKED;
@@ -85,13 +127,10 @@ void SavePreferences() {
         RegSetValueEx(hkey, REGVAL_DURATION, 0, REG_DWORD, (BYTE*) &dwValue, sizeof(dwValue));
     }
 
-    dwValue = IsChecked(IDC_ALARM_MSGBOX) ? 1 : 0;
+    dwValue = IsChecked(IDC_MSGBOX) ? 1 : 0;
     RegSetValueEx(hkey, REGVAL_ALARM_MSGBOX, 0, REG_DWORD, (BYTE*) &dwValue, sizeof(dwValue));
 
-    dwValue = IsChecked(IDC_ALARM_FRONT) ? 1 : 0;
-    RegSetValueEx(hkey, REGVAL_ALARM_FRONT, 0, REG_DWORD, (BYTE*) &dwValue, sizeof(dwValue));
-
-    dwValue = IsChecked(IDC_ALARM_SOUND) ? 1 : 0;
+    dwValue = IsChecked(IDC_SOUND) ? 1 : 0;
     RegSetValueEx(hkey, REGVAL_ALARM_SOUND, 0, REG_DWORD, (BYTE*) &dwValue, sizeof(dwValue));
 
     RegCloseKey(hkey);
@@ -116,19 +155,13 @@ void LoadPreferences() {
     dwLen = sizeof(dwValue);
     rc = RegQueryValueEx(hkey, REGVAL_ALARM_MSGBOX, 0, &dwType, (LPBYTE) &dwValue, &dwLen);
     if (rc == ERROR_SUCCESS && dwType == REG_DWORD && dwLen == sizeof(dwValue)) {
-        SendDlgItemMessage(g_hwnd, IDC_ALARM_MSGBOX, BM_SETCHECK, dwValue ? BST_CHECKED : BST_UNCHECKED, 0);
-    }
-
-    dwLen = sizeof(dwValue);
-    rc = RegQueryValueEx(hkey, REGVAL_ALARM_FRONT, 0, &dwType, (LPBYTE) &dwValue, &dwLen);
-    if (rc == ERROR_SUCCESS && dwType == REG_DWORD && dwLen == sizeof(dwValue)) {
-        SendDlgItemMessage(g_hwnd, IDC_ALARM_FRONT, BM_SETCHECK, dwValue ? BST_CHECKED : BST_UNCHECKED, 0);
+        SendDlgItemMessage(g_hwnd, IDC_MSGBOX, BM_SETCHECK, dwValue ? BST_CHECKED : BST_UNCHECKED, 0);
     }
 
     dwLen = sizeof(dwValue);
     rc = RegQueryValueEx(hkey, REGVAL_ALARM_SOUND, 0, &dwType, (LPBYTE) &dwValue, &dwLen);
     if (rc == ERROR_SUCCESS && dwType == REG_DWORD && dwLen == sizeof(dwValue)) {
-        SendDlgItemMessage(g_hwnd, IDC_ALARM_SOUND, BM_SETCHECK, dwValue ? BST_CHECKED : BST_UNCHECKED, 0);
+        SendDlgItemMessage(g_hwnd, IDC_SOUND, BM_SETCHECK, dwValue ? BST_CHECKED : BST_UNCHECKED, 0);
     }
 
     RegCloseKey(hkey);
@@ -136,21 +169,13 @@ void LoadPreferences() {
 
 void EnableControls(BOOL bEnable)
 {
-    int rgControl[] = {
-        IDC_MINS, IDC_SECS, IDC_ALARM_FRONT, IDC_ALARM_MSGBOX, IDC_ALARM_SOUND
-    };
-    for (int n = 0; n < ARRAYLEN(rgControl); ++n) {
-        EnableWindow(GetDlgItem(g_hwnd, rgControl[n]), bEnable);
+    for (int n = 0; n < ARRAYLEN(g_rgControl); ++n) {
+        EnableWindow(GetDlgItem(g_hwnd, g_rgControl[n]), bEnable);
     }
 }
 
-BOOL OnInitDialog(HWND hwnd, WPARAM wParam) 
+void CenterWindow(HWND hwnd)
 {
-    // attach icon to main dialog
-    HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_GEGG));
-    SendMessage(hwnd, WM_SETICON, WPARAM(ICON_SMALL), LPARAM(hIcon));
-    SendMessage(hwnd, WM_SETICON, WPARAM(ICON_BIG),   LPARAM(hIcon));
-
     // Get the owner window and dialog box rectangles
     HWND hwndOwner;
     if ((hwndOwner = GetParent(hwnd)) == NULL) {
@@ -177,7 +202,32 @@ BOOL OnInitDialog(HWND hwnd, WPARAM wParam)
         rcOwner.top + (rc.bottom / 2), 
         0, 0,          // Ignores size arguments. 
         SWP_NOSIZE); 
+}
 
+void EnableControlNotifications(HWND hwnd)
+{
+    DWORD dwStyle;
+    HWND hwndCtrl;
+    for (int n = 0; n < ARRAYLEN(g_rgControl); ++n) {
+        // subclass all dialog items so that we can set their background
+        hwndCtrl = GetDlgItem(hwnd, g_rgControl[n]);
+        dwStyle = GetWindowLong(hwndCtrl, GWL_STYLE);
+        SetWindowLong(hwndCtrl, GWL_STYLE, dwStyle | SS_NOTIFY);
+    }
+}
+
+BOOL OnInitDialog(HWND hwnd, WPARAM wParam) 
+{
+    // attach icon to main dialog
+    HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_GEGG));
+    SendMessage(hwnd, WM_SETICON, WPARAM(ICON_SMALL), LPARAM(hIcon));
+    SendMessage(hwnd, WM_SETICON, WPARAM(ICON_BIG),   LPARAM(hIcon));
+
+    CenterWindow(hwnd);
+
+    EnableControlNotifications(hwnd);
+
+    // set focus to IDC_MINS
     if (GetDlgCtrlID((HWND) wParam) != IDC_MINS) { 
         SetFocus(GetDlgItem(hwnd, IDC_MINS)); 
         return FALSE; 
@@ -186,28 +236,69 @@ BOOL OnInitDialog(HWND hwnd, WPARAM wParam)
     return TRUE; 
 }
 
-void SoundAlarm()
+void StartFlash()
 {
-    if (IsChecked(IDC_ALARM_SOUND)) {
-        PlaySound(NULL, NULL, SND_NODEFAULT);
-        PlaySound((LPCTSTR) SND_ALIAS_SYSTEMEXCLAMATION, 
-            NULL, SND_ALIAS_ID | SND_NODEFAULT | SND_ASYNC);
+    OnTimer(TIMERID_FLASH, 0);
+}
+
+void StopSoundingAlarm()
+{
+    if (!g_bIsAlarmSounding) {
+        return;
     }
 
-    if (IsChecked(IDC_ALARM_FRONT)) {
-        ShowWindow(g_hwnd, SW_SHOW);
-        SetActiveWindow(g_hwnd);
-        SetForegroundWindow(g_hwnd);
+    g_bIsAlarmSounding = FALSE;
+
+    KillTimer(g_hwnd, TIMERID_FLASH);
+    KillTimer(g_hwnd, TIMERID_SOUND);
+
+    // stop the taskbar flash
+    FLASHWINFO fwi;
+    fwi.cbSize = sizeof(fwi);
+    fwi.hwnd = g_hwnd;
+    fwi.dwFlags = FLASHW_STOP;
+    fwi.dwTimeout = 0;
+    fwi.uCount = 0;
+    FlashWindowEx(&fwi);
+
+    // get rid of the red
+    g_bShowRed = FALSE;
+
+    RECT rcClient;
+    GetClientRect(g_hwnd, &rcClient);
+    InvalidateRect(g_hwnd, &rcClient, TRUE);
+
+    SetDlgItemText(g_hwnd, IDC_START, MSG_STARTBUTTON);
+
+    OnStopTiming();
+}
+
+void StartSoundingAlarm()
+{
+    KillTimer(g_hwnd, TIMERID_COUNTDOWN);
+    EnableControls(TRUE);
+    SetDurationText(0, true);
+
+    SetDlgItemText(g_hwnd, IDC_START, MSG_STOPBUTTON);
+    g_bIsAlarmSounding = TRUE;
+
+    StartFlash();
+
+    if (IsChecked(IDC_SOUND)) {
+        g_nSoundCount = 0;
+        OnTimer(TIMERID_SOUND, 0); 
     }
 
-    if (IsChecked(IDC_ALARM_MSGBOX)) {
+    if (IsChecked(IDC_MSGBOX)) {
+        ShowWindow(g_hwnd, SW_RESTORE);
         MessageBox(g_hwnd, MSG_ALARM, APPTITLE, MB_ICONEXCLAMATION | MB_OK);
+        StopSoundingAlarm();
     }
 }
 
 void OnStopTiming() {
-    KillTimer(g_hwnd, TIMERID);
-    SetWindowText(GetDlgItem(g_hwnd, IDC_START), MSG_STARTBUTTON);
+    KillTimer(g_hwnd, TIMERID_COUNTDOWN);
+    SetDlgItemText(g_hwnd, IDC_START, MSG_STARTBUTTON);
     EnableControls(TRUE);
     SetDurationText(g_dwTimerDuration, false);
     g_dwTimerStart = 0;
@@ -217,23 +308,64 @@ void OnStopTiming() {
 
 BOOL OnTimer(WPARAM wParam, LPARAM lParam) 
 {
-    if (wParam != TIMERID) {
-        return FALSE;
+    if (wParam == TIMERID_COUNTDOWN) {
+        DWORD dwDuration = GetTickCount() - g_dwTimerStart;
+        if (dwDuration >= g_dwTimerDuration) {
+            StartSoundingAlarm();
+        }
+        else {
+            DWORD dwRemaining = g_dwTimerDuration - dwDuration;
+            dwDuration = min(dwRemaining, 1000);
+            SetTimer(g_hwnd, TIMERID_COUNTDOWN, dwDuration, NULL);
+            SetDurationText(dwRemaining + 999, true); // round up
+        }
+
+        return TRUE;
     }
 
-    DWORD dwDuration = GetTickCount() - g_dwTimerStart;
-    if (dwDuration >= g_dwTimerDuration) {
-        OnStopTiming();
-        SoundAlarm();
-    }
-    else {
-        DWORD dwRemaining = g_dwTimerDuration - dwDuration;
-        dwDuration = min(dwRemaining, 1000);
-        SetTimer(g_hwnd, TIMERID, dwDuration, NULL);
-        SetDurationText(dwRemaining, true);
+    if (wParam == TIMERID_FLASH) {
+        g_bShowRed = !g_bShowRed;
+
+        RECT rcClient;
+        GetClientRect(g_hwnd, &rcClient);
+        InvalidateRect(g_hwnd, &rcClient, TRUE);
+        
+        FLASHWINFO fwi;
+        fwi.cbSize = sizeof(fwi);
+        fwi.hwnd = g_hwnd;
+        fwi.dwFlags = FLASHW_ALL;
+        fwi.dwTimeout = 1000;
+        fwi.uCount = 1;
+        FlashWindowEx(&fwi);
+
+        SetTimer(g_hwnd, TIMERID_FLASH, TIMERDELAY_FLASH, NULL);
+        return TRUE;
     }
 
-    return TRUE;
+    if (wParam == TIMERID_SOUND) {
+        PlaySound(NULL, NULL, SND_NODEFAULT);
+        PlaySound((LPCTSTR) IDR_AHEM, g_hInstance, SND_RESOURCE | SND_NODEFAULT | SND_ASYNC);
+
+        // when generated more than once, sound it twice a little overlapped 
+        // for a double whammy effect
+        if (g_nSoundCount > 0) { 
+            Sleep(500);
+            PlaySound((LPCTSTR) IDR_AHEM, g_hInstance, SND_RESOURCE | SND_NODEFAULT | SND_ASYNC);
+        }
+
+        // increase the amount of time before we play the sound each time and
+        // set a maximum on the number of times we play it.
+        ++g_nSoundCount;
+        if (g_nSoundCount >= 5) {
+            KillTimer(g_hwnd, TIMERID_SOUND);
+        }
+        else {
+            SetTimer(g_hwnd, TIMERID_SOUND, TIMERDELAY_SOUND * g_nSoundCount, NULL);
+        }
+        return TRUE;
+    }
+
+    return FALSE;
 }
 
 void OnStartTiming() {
@@ -246,10 +378,10 @@ void OnStartTiming() {
 
     SavePreferences();
 
-    SetWindowText(GetDlgItem(g_hwnd, IDC_START), MSG_STOPBUTTON);
+    SetDlgItemText(g_hwnd, IDC_START, MSG_STOPBUTTON);
     EnableControls(FALSE);
 
-    OnTimer(TIMERID, 0); // will start the timer
+    OnTimer(TIMERID_COUNTDOWN, 0); // will start the timer
 }
 
 BOOL OnEnter() 
@@ -283,7 +415,10 @@ BOOL OnCommand(WPARAM wParam, LPARAM lParam)
         return FALSE;
 
     case IDC_START:
-        if (g_dwTimerStart && g_dwTimerDuration) {
+        if (g_bIsAlarmSounding) {
+            StopSoundingAlarm();
+        }
+        else if (g_dwTimerStart && g_dwTimerDuration) {
             OnStopTiming();
         }
         else {
@@ -299,17 +434,49 @@ BOOL OnCommand(WPARAM wParam, LPARAM lParam)
     }
 }
 
-BOOL CALLBACK GeggDialogProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
+BOOL OnEraseBackground(HDC hDC, bool bIsControl)
+{
+    if (bIsControl) {
+	    SetBkColor(hDC, FLASH_COLOR);
+        return (BOOL) (g_bShowRed ? g_brush : FALSE);
+    }
+
+    if (g_bShowRed) {
+        RECT rcClient;
+        GetClientRect(g_hwnd, &rcClient);
+        FillRect(hDC, &rcClient, g_brush);
+	    SetBkColor(hDC, FLASH_COLOR);
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+INT_PTR CALLBACK GeggDialogProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 { 
     switch (message) { 
     case WM_INITDIALOG:
         return OnInitDialog(hwnd, wParam);
+
+    case WM_ERASEBKGND:
+        return OnEraseBackground((HDC) wParam, false);
+
+    case WM_CTLCOLORSTATIC:
+        return OnEraseBackground((HDC) wParam, true);
 
     case WM_COMMAND:
         return OnCommand(wParam, lParam);
 
     case WM_TIMER:
         return OnTimer(wParam, lParam);
+
+    case WM_SETFOCUS:
+    case WM_LBUTTONUP:
+    case WM_NCLBUTTONUP:
+        if (g_bIsAlarmSounding) {
+            StopSoundingAlarm();
+        }
+        return FALSE;
 
     case WM_CLOSE:
         SavePreferences();
@@ -329,6 +496,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pCmdLine, 
 {
     g_hInstance = hInstance;
 
+    g_brush = CreateSolidBrush(FLASH_COLOR);
+
     g_hwnd = CreateDialog(g_hInstance, MAKEINTRESOURCE(IDD_GEGG), NULL, GeggDialogProc);
     if (!g_hwnd) return 1;
 
@@ -336,10 +505,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pCmdLine, 
 
     SetDlgItemText(g_hwnd, IDC_MINS, _T("3"));
     SetDlgItemText(g_hwnd, IDC_SECS, _T("0"));
-
-    SendDlgItemMessage(g_hwnd, IDC_ALARM_FRONT,  BM_SETCHECK, BST_CHECKED, 0);
-    SendDlgItemMessage(g_hwnd, IDC_ALARM_MSGBOX, BM_SETCHECK, BST_CHECKED, 0);
-    SendDlgItemMessage(g_hwnd, IDC_ALARM_SOUND,  BM_SETCHECK, BST_CHECKED, 0);
 
     LoadPreferences();
 
@@ -352,6 +517,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pCmdLine, 
             DispatchMessage(&msg);
         }
     }
+
+    DeleteObject(g_brush);
 
     return 0;
 }
