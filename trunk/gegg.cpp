@@ -31,6 +31,7 @@ THE SOFTWARE.
 #include <shellapi.h>
 #include <tchar.h>
 #include <stdio.h> 
+#include <assert.h>
 
 #include "resource.h"
 
@@ -56,6 +57,8 @@ THE SOFTWARE.
 #define REGVAL_USE_TRAY         _T("MinimizeToTray")
 
 #define APPTITLE                _T("The Good Egg")
+#define APPLINK                 _T("http://code.jellycan.com/")
+#define ABOUTTITLE              _T("About The Good Egg")
 #define APPTITLE_FORMAT         _T("%u:%02u - The Good Egg")
 
 #define MSG_STARTBUTTON         _T("Start")
@@ -88,47 +91,20 @@ const static int g_rgControl[] = {
 
 // forward dec
 BOOL OnTimer(WPARAM wParam, LPARAM lParam);
-void OnStopTiming();
+void StopTiming();
 void UpdateTrayIconTooltip(LPCTSTR pszTitle);
+void ShowAboutBox();
+void RestoreFromTray();
+void StopSoundingAlarm();
+DWORD GetTimerDuration();
+void SetDurationText(DWORD dwDuration, bool bAddToTitleBar);
 
 
+// ----------------------------------------------------------------------------
+// Preferences
 
 bool IsChecked(int id) {
     return SendDlgItemMessage(g_hwnd, id, BM_GETCHECK, 0, 0) == BST_CHECKED;
-}
-
-DWORD GetTimerDuration() {
-    BOOL bSuccess = TRUE;
-    DWORD dwDuration = GetDlgItemInt(g_hwnd, IDC_MINS, &bSuccess, FALSE) * 60;
-    if (bSuccess) { 
-        dwDuration += GetDlgItemInt(g_hwnd, IDC_SECS, &bSuccess, FALSE);
-    }
-    if (!bSuccess) {
-        return 0;
-    }
-    return max(dwDuration * 1000, 1);
-}
-
-void SetDurationText(DWORD dwDuration, bool bTitleBar) 
-{
-    DWORD dwMins = (dwDuration / 1000) / 60;
-    DWORD dwSecs = (dwDuration / 1000) % 60;
-
-    SetDlgItemInt(g_hwnd, IDC_MINS, dwMins, FALSE);
-    SetDlgItemInt(g_hwnd, IDC_SECS, dwSecs, FALSE);
-
-    TCHAR szBuf[50];
-    if (bTitleBar) {
-        _sntprintf(szBuf, ARRAYLEN(szBuf), APPTITLE_FORMAT, dwMins, dwSecs);
-    }
-    else {
-        _tcscpy(szBuf, APPTITLE);
-    }
-    SetWindowText(g_hwnd, szBuf);
-    
-    if (g_bMinimizedToTray) {
-        UpdateTrayIconTooltip(szBuf);
-    }
 }
 
 void SavePreferences() {
@@ -194,10 +170,49 @@ void LoadPreferences() {
     RegCloseKey(hkey);
 }
 
+// ----------------------------------------------------------------------------
+// Timing and Alarms
+
+DWORD GetTimerDuration() {
+    BOOL bSuccess = TRUE;
+    DWORD dwDuration = GetDlgItemInt(g_hwnd, IDC_MINS, &bSuccess, FALSE) * 60;
+    if (bSuccess) { 
+        dwDuration += GetDlgItemInt(g_hwnd, IDC_SECS, &bSuccess, FALSE);
+    }
+    if (!bSuccess) {
+        return 0;
+    }
+    return max(dwDuration * 1000, 1);
+}
+
+void SetDurationText(DWORD dwDuration, bool bAddToTitleBar) 
+{
+    DWORD dwMins = (dwDuration / 1000) / 60;
+    DWORD dwSecs = (dwDuration / 1000) % 60;
+
+    SetDlgItemInt(g_hwnd, IDC_MINS, dwMins, FALSE);
+    SetDlgItemInt(g_hwnd, IDC_SECS, dwSecs, FALSE);
+
+    TCHAR szBuf[50];
+    if (bAddToTitleBar) {
+        _sntprintf(szBuf, ARRAYLEN(szBuf), APPTITLE_FORMAT, dwMins, dwSecs);
+    }
+    else {
+        _tcscpy(szBuf, APPTITLE);
+    }
+    SetWindowText(g_hwnd, szBuf);
+    
+    if (g_bMinimizedToTray) {
+        UpdateTrayIconTooltip(szBuf);
+    }
+}
+
 void EnableControls(BOOL bEnable)
 {
+    HWND hwndCtrl;
     for (int n = 0; n < ARRAYLEN(g_rgControl); ++n) {
-        EnableWindow(GetDlgItem(g_hwnd, g_rgControl[n]), bEnable);
+        hwndCtrl = GetDlgItem(g_hwnd, g_rgControl[n]);
+        EnableWindow(hwndCtrl, bEnable);
     }
 }
 
@@ -243,29 +258,57 @@ void EnableControlNotifications(HWND hwnd)
     }
 }
 
-BOOL OnInitDialog(HWND hwnd, WPARAM wParam) 
-{
-    // attach icon to main dialog
-    HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_GEGG));
-    SendMessage(hwnd, WM_SETICON, WPARAM(ICON_SMALL), LPARAM(hIcon));
-    SendMessage(hwnd, WM_SETICON, WPARAM(ICON_BIG),   LPARAM(hIcon));
+void StartTiming() {
+    g_dwTimerDuration = GetTimerDuration();
+    if (!g_dwTimerDuration) {
+        MessageBox(g_hwnd, MSG_INVALIDTIME, APPTITLE, MB_ICONERROR | MB_OK);
+        return;
+    }
+    g_dwTimerStart = GetTickCount();
 
-    CenterWindow(hwnd);
+    SavePreferences();
 
-    EnableControlNotifications(hwnd);
+    SetDlgItemText(g_hwnd, IDC_START, MSG_STOPBUTTON);
+    EnableControls(FALSE);
 
-    // set focus to IDC_MINS
-    if (GetDlgCtrlID((HWND) wParam) != IDC_MINS) { 
-        SetFocus(GetDlgItem(hwnd, IDC_MINS)); 
-        return FALSE; 
-    } 
-
-    return TRUE; 
+    OnTimer(TIMERID_COUNTDOWN, 0); // will start the timer
 }
 
-void StartFlash()
+void StopTiming() {
+    RestoreFromTray();
+    KillTimer(g_hwnd, TIMERID_COUNTDOWN);
+    SetDlgItemText(g_hwnd, IDC_START, MSG_STARTBUTTON);
+    EnableControls(TRUE);
+    SetDurationText(g_dwTimerDuration, false);
+    g_dwTimerStart = 0;
+    g_dwTimerDuration = 0;
+    PostMessage(g_hwnd, WM_NEXTDLGCTL, (WPARAM) GetDlgItem(g_hwnd, IDC_MINS), TRUE);
+}
+
+void StartSoundingAlarm()
 {
+    RestoreFromTray();
+
+    KillTimer(g_hwnd, TIMERID_COUNTDOWN);
+    EnableControls(TRUE);
+    SetDurationText(0, true);
+
+    SetDlgItemText(g_hwnd, IDC_START, MSG_STOPBUTTON);
+    g_bIsAlarmSounding = TRUE;
+
+    // start dialog flashing
     OnTimer(TIMERID_FLASH, 0);
+
+    if (IsChecked(IDC_SOUND)) {
+        g_nSoundCount = 0;
+        OnTimer(TIMERID_SOUND, 0); 
+    }
+
+    if (IsChecked(IDC_MSGBOX)) {
+        ShowWindow(g_hwnd, SW_RESTORE);
+        MessageBox(g_hwnd, MSG_ALARM, APPTITLE, MB_ICONEXCLAMATION | MB_OK);
+        StopSoundingAlarm();
+    }
 }
 
 void StopSoundingAlarm()
@@ -297,8 +340,11 @@ void StopSoundingAlarm()
 
     SetDlgItemText(g_hwnd, IDC_START, MSG_STARTBUTTON);
 
-    OnStopTiming();
+    StopTiming();
 }
+
+// ----------------------------------------------------------------------------
+// Tray Icon
 
 void AddTrayIcon()
 {
@@ -387,40 +433,37 @@ void UpdateTrayIconTooltip(LPCTSTR pszTitle)
     Shell_NotifyIcon(NIM_MODIFY, &nid);
 }
 
-void OnStopTiming() {
-    RestoreFromTray();
-    KillTimer(g_hwnd, TIMERID_COUNTDOWN);
-    SetDlgItemText(g_hwnd, IDC_START, MSG_STARTBUTTON);
-    EnableControls(TRUE);
-    SetDurationText(g_dwTimerDuration, false);
-    g_dwTimerStart = 0;
-    g_dwTimerDuration = 0;
-    PostMessage(g_hwnd, WM_NEXTDLGCTL, (WPARAM) GetDlgItem(g_hwnd, IDC_MINS), TRUE);
-}
+// ----------------------------------------------------------------------------
+// Message Handlers
 
-void StartSoundingAlarm()
+BOOL OnInitDialog(HWND hwnd, WPARAM wParam) 
 {
-    RestoreFromTray();
+    // attach icon to main dialog
+    HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_GEGG));
+    SendMessage(hwnd, WM_SETICON, WPARAM(ICON_SMALL), LPARAM(hIcon));
+    SendMessage(hwnd, WM_SETICON, WPARAM(ICON_BIG),   LPARAM(hIcon));
 
-    KillTimer(g_hwnd, TIMERID_COUNTDOWN);
-    EnableControls(TRUE);
-    SetDurationText(0, true);
+    CenterWindow(hwnd);
 
-    SetDlgItemText(g_hwnd, IDC_START, MSG_STOPBUTTON);
-    g_bIsAlarmSounding = TRUE;
+    EnableControlNotifications(hwnd);
 
-    StartFlash();
+	// IDM_ABOUTBOX can't be a system message
+	assert((IDM_ABOUTBOX & 0xFFF0) == IDM_ABOUTBOX);
+	assert(IDM_ABOUTBOX < 0xF000);
 
-    if (IsChecked(IDC_SOUND)) {
-        g_nSoundCount = 0;
-        OnTimer(TIMERID_SOUND, 0); 
-    }
+    HMENU hMenu = GetSystemMenu(hwnd, FALSE);
+	if (hMenu) {
+		AppendMenu(hMenu, MF_SEPARATOR, NULL, NULL);
+		AppendMenu(hMenu, MF_STRING, IDM_ABOUTBOX, ABOUTTITLE _T(" ..."));
+	}
 
-    if (IsChecked(IDC_MSGBOX)) {
-        ShowWindow(g_hwnd, SW_RESTORE);
-        MessageBox(g_hwnd, MSG_ALARM, APPTITLE, MB_ICONEXCLAMATION | MB_OK);
-        StopSoundingAlarm();
-    }
+    // set focus to IDC_MINS
+    if (GetDlgCtrlID((HWND) wParam) != IDC_MINS) { 
+        SetFocus(GetDlgItem(hwnd, IDC_MINS)); 
+        return FALSE; 
+    } 
+
+    return TRUE; 
 }
 
 BOOL OnTimer(WPARAM wParam, LPARAM lParam) 
@@ -500,22 +543,6 @@ BOOL OnTimer(WPARAM wParam, LPARAM lParam)
     return FALSE;
 }
 
-void OnStartTiming() {
-    g_dwTimerDuration = GetTimerDuration();
-    if (!g_dwTimerDuration) {
-        MessageBox(g_hwnd, MSG_INVALIDTIME, APPTITLE, MB_ICONERROR | MB_OK);
-        return;
-    }
-    g_dwTimerStart = GetTickCount();
-
-    SavePreferences();
-
-    SetDlgItemText(g_hwnd, IDC_START, MSG_STOPBUTTON);
-    EnableControls(FALSE);
-
-    OnTimer(TIMERID_COUNTDOWN, 0); // will start the timer
-}
-
 BOOL OnEnter() 
 {
     DWORD id = GetDlgCtrlID(GetFocus());
@@ -551,10 +578,10 @@ BOOL OnCommand(WPARAM wParam, LPARAM lParam)
             StopSoundingAlarm();
         }
         else if (g_dwTimerStart && g_dwTimerDuration) {
-            OnStopTiming();
+            StopTiming();
         }
         else {
-            OnStartTiming();
+            StartTiming();
         }
         return TRUE;
 
@@ -595,6 +622,24 @@ BOOL OnTrayMessage(WPARAM wParam, LPARAM lParam)
     return FALSE;
 }
 
+BOOL OnSysCommand(WPARAM wParam, LPARAM lParam)
+{
+    if (wParam == SC_MINIMIZE) {
+        if (IsChecked(IDC_USETRAY)) {
+            MinimizeToTray();
+            SetWindowLong(g_hwnd, DWL_MSGRESULT, 0);
+            return TRUE;
+        }
+    }
+
+	if ((wParam & 0xFFF0) == IDM_ABOUTBOX) {
+        ShowAboutBox();
+        return TRUE;
+	}
+
+    return FALSE;
+}
+
 INT_PTR CALLBACK GeggDialogProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 { 
     switch (message) { 
@@ -622,12 +667,7 @@ INT_PTR CALLBACK GeggDialogProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
         return FALSE;
 
     case WM_SYSCOMMAND:
-        if (wParam == SC_MINIMIZE && IsChecked(IDC_USETRAY)) {
-            MinimizeToTray();
-            SetWindowLong(g_hwnd, DWL_MSGRESULT, 0);
-            return TRUE;
-        }
-        return FALSE;
+        return OnSysCommand(wParam, lParam);
 
     case WM_GEGG_TRAYMSG:
         return OnTrayMessage(wParam, lParam);
@@ -693,5 +733,142 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pCmdLine, 
     DeleteObject(g_brush);
 
     return 0;
+}
+
+// ----------------------------------------------------------------------------
+// About Dialog
+
+#define PROP_ORIGINAL_PROC		TEXT("HyperlinkOrigProc")
+#define PROP_ORIGINAL_FONT		TEXT("HyperlinkOrigFont")
+#define PROP_UNDERLINE_FONT		TEXT("HyperlinkUnderlineFont")
+
+LRESULT CALLBACK _HyperlinkProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    WNDPROC pfnOrigProc = (WNDPROC) GetProp(hwnd, PROP_ORIGINAL_PROC);
+
+    switch (message)
+    {
+    case WM_SETCURSOR:
+        {
+            // since IDC_HAND is not available on all operating systems,
+            // we will load the arrow cursor if IDC_HAND is not present
+            HCURSOR hCursor = LoadCursor(NULL, MAKEINTRESOURCE(IDC_HAND));
+            if (!hCursor) {
+                hCursor = LoadCursor(NULL, MAKEINTRESOURCE(IDC_ARROW));
+            }
+            SetCursor(hCursor);
+        }
+        return TRUE;
+
+    case WM_MOUSEMOVE:
+        if (GetCapture() != hwnd) {
+            HFONT hFont = (HFONT) GetProp(hwnd, PROP_UNDERLINE_FONT);
+            SendMessage(hwnd, WM_SETFONT, (WPARAM) hFont, FALSE);
+            InvalidateRect(hwnd, NULL, FALSE);
+            SetCapture(hwnd);
+        }
+        else {
+            RECT rect;
+            GetWindowRect(hwnd, &rect);
+
+            POINT pt = { LOWORD(lParam), HIWORD(lParam) };
+            ClientToScreen(hwnd, &pt);
+
+            if (!PtInRect(&rect, pt)) {
+                HFONT hFont = (HFONT) GetProp(hwnd, PROP_ORIGINAL_FONT);
+                SendMessage(hwnd, WM_SETFONT, (WPARAM) hFont, FALSE);
+                InvalidateRect(hwnd, NULL, FALSE);
+                ReleaseCapture();
+            }
+        }
+        break;
+
+    case WM_DESTROY:
+        {
+            SetWindowLong(hwnd, GWL_WNDPROC, (LONG) pfnOrigProc);
+            RemoveProp(hwnd, PROP_ORIGINAL_PROC);
+
+            HFONT hOrigFont = (HFONT) GetProp(hwnd, PROP_ORIGINAL_FONT);
+            SendMessage(hwnd, WM_SETFONT, (WPARAM) hOrigFont, 0);
+            RemoveProp(hwnd, PROP_ORIGINAL_FONT);
+
+            HFONT hFont = (HFONT) GetProp(hwnd, PROP_UNDERLINE_FONT);
+            DeleteObject(hFont);
+            RemoveProp(hwnd, PROP_UNDERLINE_FONT);
+        }
+        break;
+    }
+
+    return CallWindowProc(pfnOrigProc, hwnd, message, wParam, lParam);
+}
+
+BOOL ConvertStaticToHyperlink(HWND hwndParent, UINT uCtrlId)
+{
+    HWND hwndCtl = GetDlgItem(hwndParent, uCtrlId);
+
+    // make sure the control will send notifications
+    DWORD dwStyle = GetWindowLong(hwndCtl, GWL_STYLE);
+    SetWindowLong(hwndCtl, GWL_STYLE, dwStyle | SS_NOTIFY);
+
+    // subclass the existing control
+    WNDPROC pfnOrigProc = (WNDPROC) GetWindowLong(hwndCtl, GWL_WNDPROC);
+    SetProp(hwndCtl, PROP_ORIGINAL_PROC, (HANDLE) pfnOrigProc);
+    SetWindowLong(hwndCtl, GWL_WNDPROC, (LONG) (WNDPROC) _HyperlinkProc);
+
+    // create an updated font by adding an underline
+    HFONT hOrigFont = (HFONT) SendMessage(hwndCtl, WM_GETFONT, 0, 0);
+    SetProp(hwndCtl, PROP_ORIGINAL_FONT, (HANDLE) hOrigFont);
+
+    LOGFONT lf;
+    GetObject(hOrigFont, sizeof(lf), &lf);
+    lf.lfUnderline = TRUE;
+
+    HFONT hFont = CreateFontIndirect(&lf);
+    SetProp(hwndCtl, PROP_UNDERLINE_FONT, (HANDLE) hFont);
+
+    return TRUE;
+}
+
+INT_PTR CALLBACK AboutDialogProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
+{
+    switch (message) { 
+    case WM_INITDIALOG:
+        {
+            HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_GEGG));
+            SendMessage(hwnd, WM_SETICON, WPARAM(ICON_SMALL), LPARAM(hIcon));
+            SendMessage(hwnd, WM_SETICON, WPARAM(ICON_BIG),   LPARAM(hIcon));
+
+            SetWindowText(hwnd, APPTITLE);
+            SetDlgItemText(hwnd, IDC_APPLINK, APPLINK);
+
+            ConvertStaticToHyperlink(hwnd, IDC_APPLINK);
+
+            CenterWindow(hwnd);
+        }
+        return TRUE;
+
+    case WM_COMMAND:
+        if (wParam == IDOK || wParam == IDCANCEL) {
+            EndDialog(hwnd, 0);
+            return TRUE;
+        }
+        if (LOWORD(wParam) == IDC_APPLINK) {
+            ShellExecute(hwnd, _T("open"), APPLINK, NULL, NULL, SW_SHOWNORMAL);
+            return TRUE;
+        }
+        return FALSE;
+
+    case WM_CLOSE:
+        EndDialog(hwnd, 0);
+        return TRUE;
+
+    default:
+        return FALSE;
+    }
+}
+
+void ShowAboutBox()
+{
+    DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_ABOUT), g_hwnd, AboutDialogProc);
 }
 
