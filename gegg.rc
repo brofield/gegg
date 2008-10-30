@@ -83,6 +83,22 @@ BEGIN
     LTEXT           "secs",IDC_STATIC,85,10,15,8
 END
 
+IDD_ABOUT DIALOGEX 0, 0, 186, 81
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "About The Good Egg"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,68,60,50,14
+    ICON            IDI_GEGG,IDC_STATIC,7,7,20,20
+    LTEXT           "The Good Egg",IDC_STATIC,44,7,46,8
+    LTEXT           "Just a simple little countdown timer",IDC_STATIC,44,20,
+                    112,8
+    LTEXT           "Copyright (c) 2008 Brodie Thiesfield",IDC_STATIC,44,34,
+                    115,8
+    LTEXT           "http://code.jellycan.com/",IDC_APPLINK,44,43,82,8
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -98,6 +114,14 @@ BEGIN
         RIGHTMARGIN, 161
         TOPMARGIN, 7
         BOTTOMMARGIN, 47
+    END
+
+    IDD_ABOUT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 74
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -118,8 +142,8 @@ IDI_GEGG                ICON                    ".\\gegg.ico"
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,2,0,0
- PRODUCTVERSION 1,2,0,0
+ FILEVERSION 1,3,0,0
+ PRODUCTVERSION 1,3,0,0
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -137,12 +161,12 @@ BEGIN
             VALUE "Comments", "Simple egg timer"
             VALUE "CompanyName", "Jellycan"
             VALUE "FileDescription", "The Good Egg"
-            VALUE "FileVersion", "1, 2, 0, 0"
+            VALUE "FileVersion", "1, 3, 0, 0"
             VALUE "InternalName", "gegg"
             VALUE "LegalCopyright", "Copyright (C) 2008 Brodie Thiesfield"
             VALUE "OriginalFilename", "gegg.exe"
             VALUE "ProductName", "The Good Egg"
-            VALUE "ProductVersion", "1, 2, 0, 0"
+            VALUE "ProductVersion", "1, 3, 0, 0"
         END
     END
     BLOCK "VarFileInfo"
