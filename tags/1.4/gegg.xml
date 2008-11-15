@@ -1,0 +1,97 @@
+<?xml version="1.0" ?>
+<XML_DIZ_INFO>
+	<MASTER_PAD_VERSION_INFO>
+		<MASTER_PAD_VERSION>3.01</MASTER_PAD_VERSION>
+		<MASTER_PAD_EDITOR>PADGen 3.0.1.38 http://www.padgen.org</MASTER_PAD_EDITOR>
+		<MASTER_PAD_INFO>Portable Application Description, or PAD for short, is a data set that is used by shareware authors to disseminate information to anyone interested in their software products. To find out more go to http://www.asp-shareware.org/pad</MASTER_PAD_INFO>
+	</MASTER_PAD_VERSION_INFO>
+	<Company_Info>
+		<Company_Name>Jellycan</Company_Name>
+		<Address_1>Nukui</Address_1>
+		<Address_2 />
+		<City_Town>Tokyo</City_Town>
+		<State_Province></State_Province>
+		<Zip_Postal_Code>10610</Zip_Postal_Code>
+		<Country>Japan</Country>
+		<Company_WebSite_URL>http://code.jellycan.com/</Company_WebSite_URL>
+		<Contact_Info>
+			<Author_First_Name>Brodie</Author_First_Name>
+			<Author_Last_Name>Thiesfield</Author_Last_Name>
+			<Author_Email>goodegg@jellycan.com</Author_Email>
+			<Contact_First_Name>Brodie</Contact_First_Name>
+			<Contact_Last_Name>Thiesfield</Contact_Last_Name>
+			<Contact_Email>goodegg@jellycan.com</Contact_Email>
+		</Contact_Info>
+		<Support_Info>
+			<Sales_Email>goodegg@jellycan.com</Sales_Email>
+			<Support_Email>goodegg@jellycan.com</Support_Email>
+			<General_Email>goodegg@jellycan.com</General_Email>
+			<Sales_Phone />
+			<Support_Phone />
+			<General_Phone />
+			<Fax_Phone />
+		</Support_Info>
+	</Company_Info>
+	<Program_Info>
+		<Program_Name>The Good Egg</Program_Name>
+		<Program_Version>1.1</Program_Version>
+		<Program_Release_Month>10</Program_Release_Month>
+		<Program_Release_Day>28</Program_Release_Day>
+		<Program_Release_Year>2008</Program_Release_Year>
+		<Program_Cost_Dollars>0.00</Program_Cost_Dollars>
+		<Program_Cost_Other_Code />
+		<Program_Cost_Other />
+		<Program_Type>Freeware</Program_Type>
+		<Program_Release_Status>New Release</Program_Release_Status>
+		<Program_Install_Support>No Install Support</Program_Install_Support>
+		<Program_OS_Support>Win95,Win98,WinME,WinNT 4.x,Windows2000,WinXP,Windows2003,Windows Vista Starter,Windows Vista Home Basic,Windows Vista Home Premium,Windows Vista Business,Windows Vista Enterprise,Windows Vista Ultimate</Program_OS_Support>
+		<Program_Language>English</Program_Language>
+		<Program_Change_Info />
+		<Program_Specific_Category>Internet</Program_Specific_Category>
+		<Program_Category_Class>Network &amp; Internet::Timers &amp; Time Synch</Program_Category_Class>
+		<Program_System_Requirements />
+		<File_Info>
+			<File_Size_Bytes>131072</File_Size_Bytes>
+			<File_Size_K>128</File_Size_K>
+			<File_Size_MB>0.13</File_Size_MB>
+		</File_Info>
+		<Expire_Info>
+			<Has_Expire_Info>N</Has_Expire_Info>
+			<Expire_Count />
+			<Expire_Based_On />
+			<Expire_Other_Info />
+			<Expire_Month />
+			<Expire_Day />
+			<Expire_Year />
+		</Expire_Info>
+	</Program_Info>
+	<Program_Descriptions>
+		<English>
+			<Keywords>timer, egg timer, countdown, countdown timer, eggtimer</Keywords>
+			<Char_Desc_45>Simple, small and unobtrusive countdown timer</Char_Desc_45>
+			<Char_Desc_80>Simple, small and unobtrusive countdown timer with multiple alert styles</Char_Desc_80>
+			<Char_Desc_250>Simple, small and unobtrusive countdown timer with multiple alert styles. Time your eggs, pizzas or the time until smoko. Hides in the icon tray and alerts via flashing the window, caption and optionally via sound and message box.</Char_Desc_250>
+			<Char_Desc_450 />
+			<Char_Desc_2000 />
+		</English>
+	</Program_Descriptions>
+	<Web_Info>
+		<Application_URLs>
+			<Application_Info_URL>http://code.jellycan.com/the-good-egg/</Application_Info_URL>
+			<Application_Order_URL />
+			<Application_Screenshot_URL>http://gegg.googlecode.com/svn/trunk/screenshot.png</Application_Screenshot_URL>
+			<Application_Icon_URL>http://gegg.googlecode.com/svn/trunk/gegg.png</Application_Icon_URL>
+			<Application_XML_File_URL>http://gegg.googlecode.com/svn/trunk/gegg.xml</Application_XML_File_URL>
+		</Application_URLs>
+		<Download_URLs>
+			<Primary_Download_URL>http://code.jellycan.com/files/gegg.exe</Primary_Download_URL>
+			<Secondary_Download_URL />
+			<Additional_Download_URL_1 />
+			<Additional_Download_URL_2 />
+		</Download_URLs>
+	</Web_Info>
+	<Permissions>
+		<Distribution_Permissions />
+		<EULA />
+	</Permissions>
+</XML_DIZ_INFO>
