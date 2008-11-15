@@ -70,8 +70,9 @@ STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_MINIMIZEBOX | WS_POPUP |
 CAPTION "gegg"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    EDITTEXT        IDC_MINS,7,7,26,14,ES_AUTOHSCROLL | ES_NUMBER
-    EDITTEXT        IDC_SECS,56,7,26,14,ES_AUTOHSCROLL | ES_NUMBER
+    COMBOBOX        IDC_TYPE,7,8,48,40,CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_TIME,56,8,48,13,ES_AUTOHSCROLL
     PUSHBUTTON      "Start",IDC_START,107,7,54,14
     CONTROL         "Play sound on alarm",IDC_SOUND,"Button",BS_AUTOCHECKBOX | 
                     WS_TABSTOP,7,26,78,10
@@ -79,8 +80,8 @@ BEGIN
                     BS_AUTOCHECKBOX | WS_TABSTOP,7,38,83,10
     CONTROL         "Minimize to tray",IDC_USETRAY,"Button",BS_AUTOCHECKBOX | 
                     WS_TABSTOP,95,26,62,10
-    LTEXT           "mins",IDC_STATIC,36,10,15,8
-    LTEXT           "secs",IDC_STATIC,85,10,15,8
+    CONTROL         "Display H:MM:SS",IDC_DIGITAL,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,95,38,69,10
 END
 
 IDD_ABOUT DIALOGEX 0, 0, 186, 81
@@ -142,8 +143,8 @@ IDI_GEGG                ICON                    ".\\gegg.ico"
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,3,0,0
- PRODUCTVERSION 1,3,0,0
+ FILEVERSION 1,4,0,0
+ PRODUCTVERSION 1,4,0,0
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -161,12 +162,12 @@ BEGIN
             VALUE "Comments", "Simple egg timer"
             VALUE "CompanyName", "http://code.jellycan.com/"
             VALUE "FileDescription", "The Good Egg"
-            VALUE "FileVersion", "1, 3, 0, 0"
+            VALUE "FileVersion", "1, 4, 0, 0"
             VALUE "InternalName", "gegg"
             VALUE "LegalCopyright", "Copyright (C) 2008 Brodie Thiesfield"
             VALUE "OriginalFilename", "gegg.exe"
             VALUE "ProductName", "The Good Egg"
-            VALUE "ProductVersion", "1, 3, 0, 0"
+            VALUE "ProductVersion", "1, 4, 0, 0"
         END
     END
     BLOCK "VarFileInfo"
@@ -183,6 +184,21 @@ END
 
 IDR_AHEM                WAVE                    "ahem.wav"
 IDR_HELLO               WAVE                    "helloo.wav"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog Info
+//
+
+IDD_GEGG DLGINIT
+BEGIN
+    IDC_TYPE, 0x403, 6, 0
+0x6544, 0x616c, 0x0079, 
+    IDC_TYPE, 0x403, 6, 0
+0x6e55, 0x6974, 0x006c, 
+    0
+END
+
 #endif    // English (Australia) resources
 /////////////////////////////////////////////////////////////////////////////
 

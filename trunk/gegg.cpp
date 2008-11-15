@@ -31,6 +31,8 @@ THE SOFTWARE.
 #include <shellapi.h>
 #include <tchar.h>
 #include <stdio.h> 
+#include <stdlib.h>
+#include <time.h>
 #include <assert.h>
 
 #include "resource.h"
@@ -55,11 +57,11 @@ THE SOFTWARE.
 #define REGVAL_ALARM_FLASH      _T("AlarmFlash")
 #define REGVAL_ALARM_SOUND      _T("AlarmSound")
 #define REGVAL_USE_TRAY         _T("MinimizeToTray")
+#define REGVAL_DIGITAL          _T("DisplayDigital")
 
 #define APPTITLE                _T("The Good Egg")
 #define APPLINK                 _T("http://code.jellycan.com/")
 #define ABOUTTITLE              _T("About The Good Egg")
-#define APPTITLE_FORMAT         _T("%u:%02u - The Good Egg")
 
 #define MSG_STARTBUTTON         _T("Start")
 #define MSG_STOPBUTTON          _T("Stop")
@@ -72,7 +74,7 @@ THE SOFTWARE.
 // globals
 HINSTANCE   g_hInstance = NULL;
 HWND        g_hwnd = NULL;
-DWORD       g_dwTimerStart = 0;
+DWORD       g_dwTimerStart = 0;     // 0 if not timing
 DWORD       g_dwTimerDuration = 0;
 BOOL        g_bShowRed = FALSE;
 HBRUSH      g_brush = NULL;
@@ -86,7 +88,7 @@ UINT        WM_TASKBARCREATED = 0;
 
 // controls
 const static int g_rgControl[] = {
-    IDC_MINS, IDC_SECS, IDC_MSGBOX, IDC_SOUND, IDC_USETRAY
+    IDC_TYPE, IDC_TIME, IDC_MSGBOX, IDC_SOUND, IDC_USETRAY, IDC_DIGITAL
 };
 
 // forward dec
@@ -117,9 +119,7 @@ void SavePreferences() {
     DWORD dwValue;
 
     dwValue = g_dwTimerDuration ? g_dwTimerDuration : GetTimerDuration();
-    if (dwValue) {
-        RegSetValueEx(hkey, REGVAL_DURATION, 0, REG_DWORD, (BYTE*) &dwValue, sizeof(dwValue));
-    }
+    RegSetValueEx(hkey, REGVAL_DURATION, 0, REG_DWORD, (BYTE*) &dwValue, sizeof(dwValue));
 
     dwValue = IsChecked(IDC_MSGBOX) ? 1 : 0;
     RegSetValueEx(hkey, REGVAL_ALARM_MSGBOX, 0, REG_DWORD, (BYTE*) &dwValue, sizeof(dwValue));
@@ -130,6 +130,9 @@ void SavePreferences() {
     dwValue = IsChecked(IDC_USETRAY) ? 1 : 0;
     RegSetValueEx(hkey, REGVAL_USE_TRAY, 0, REG_DWORD, (BYTE*) &dwValue, sizeof(dwValue));
     
+    dwValue = IsChecked(IDC_DIGITAL) ? 1 : 0;
+    RegSetValueEx(hkey, REGVAL_DIGITAL, 0, REG_DWORD, (BYTE*) &dwValue, sizeof(dwValue));
+
     RegCloseKey(hkey);
 }
 
@@ -143,9 +146,8 @@ void LoadPreferences() {
 
     dwLen = sizeof(dwValue);
     rc = RegQueryValueEx(hkey, REGVAL_DURATION, 0, &dwType, (LPBYTE) &dwValue, &dwLen);
-    if (rc == ERROR_SUCCESS && dwType == REG_DWORD && dwLen == sizeof(dwValue) 
-        && dwValue > 0 && dwValue < 24 * 60 * 60 * 1000) 
-    {
+    if (rc == ERROR_SUCCESS && dwType == REG_DWORD && dwLen == sizeof(dwValue)) {
+        g_dwTimerDuration = dwValue;
         SetDurationText(dwValue, false);
     }
 
@@ -167,6 +169,12 @@ void LoadPreferences() {
         SendDlgItemMessage(g_hwnd, IDC_USETRAY, BM_SETCHECK, dwValue ? BST_CHECKED : BST_UNCHECKED, 0);
     }
 
+    dwLen = sizeof(dwValue);
+    rc = RegQueryValueEx(hkey, REGVAL_DIGITAL, 0, &dwType, (LPBYTE) &dwValue, &dwLen);
+    if (rc == ERROR_SUCCESS && dwType == REG_DWORD && dwLen == sizeof(dwValue)) {
+        SendDlgItemMessage(g_hwnd, IDC_DIGITAL, BM_SETCHECK, dwValue ? BST_CHECKED : BST_UNCHECKED, 0);
+    }
+
     RegCloseKey(hkey);
 }
 
@@ -174,33 +182,144 @@ void LoadPreferences() {
 // Timing and Alarms
 
 DWORD GetTimerDuration() {
-    BOOL bSuccess = TRUE;
-    DWORD dwDuration = GetDlgItemInt(g_hwnd, IDC_MINS, &bSuccess, FALSE) * 60;
-    if (bSuccess) { 
-        dwDuration += GetDlgItemInt(g_hwnd, IDC_SECS, &bSuccess, FALSE);
-    }
-    if (!bSuccess) {
+    TCHAR szTime[50] = { 0 };
+    if (!GetDlgItemText(g_hwnd, IDC_TIME, szTime, ARRAYLEN(szTime))) {
         return 0;
     }
-    return max(dwDuration * 1000, 1);
+    int nType = SendDlgItemMessage(g_hwnd, IDC_TYPE, CB_GETCURSEL, 0, 0);
+
+    // trim space
+    TCHAR * pTime = szTime;
+    int nHours = -1, nMins = -1, nSecs = -1;
+    while (*pTime) {
+        while (*pTime && !_istdigit(*pTime)) ++pTime;
+        if (!*pTime) break;
+
+        int nCurr = _tcstoul(pTime, &pTime, 10);
+        while (*pTime && _istspace(*pTime)) ++pTime;
+
+        switch (*pTime) {
+        case _T('h'):
+        case _T('H'):
+            nHours = nCurr;
+            break;
+
+        case _T('m'):
+        case _T('M'):
+            nMins = nCurr;
+            break;
+
+        case _T('s'):
+        case _T('S'):
+            nSecs = nCurr;
+            break;
+
+        case _T(':'):
+        case _T('.'):
+        case 0:
+            if (nSecs == -1) {
+                nSecs = nCurr;
+            }
+            else if (nMins == -1) {
+                nMins = nSecs;
+                nSecs = nCurr;
+            }
+            else if (nHours == -1) {
+                nHours = nMins;
+                nMins = nSecs;
+                nSecs = nCurr;
+            }
+            else {
+                return 0;
+            }
+            break;
+        }
+    }
+
+    // delay
+    if (nType == 0) { 
+        // zero out the unset items
+        if (nHours == -1) nHours = 0;
+        if (nMins == -1)  nMins = 0;
+        if (nSecs == -1)  nSecs = 0;
+
+        return max((nHours * 3600 + nMins * 60 + nSecs) * 1000, 1);
+    }
+
+    // until
+
+    time_t tNow = time(NULL);
+    struct tm t = *localtime(&tNow);
+
+    // allow hms, hm, h, hh:mm or hh:mm:ss.
+    if (nHours == -1) { // hh:mm
+        if (nMins == -1 || nSecs == -1) return 0;
+        nHours = nMins;
+        nMins  = nSecs;
+        nSecs  = 0;
+    }
+    else { // hms, hm, h, hh:mm:ss
+        if (nMins == -1)  nMins = 0;
+        if (nSecs == -1)  nSecs = 0;
+    }
+
+    t.tm_hour = nHours;
+    t.tm_min  = nMins;
+    t.tm_sec  = nSecs;
+    time_t tUntil = mktime(&t);
+    while (tUntil < tNow) {
+        tUntil += (12 * 60 * 60); // add 12 hours until we get to a time in the future
+    }
+
+    SendDlgItemMessage(g_hwnd, IDC_TYPE, CB_SETCURSEL, 0, 0);
+    return max((tUntil - tNow) * 1000, 1);
 }
 
 void SetDurationText(DWORD dwDuration, bool bAddToTitleBar) 
 {
-    DWORD dwMins = (dwDuration / 1000) / 60;
-    DWORD dwSecs = (dwDuration / 1000) % 60;
+    bool bUsingDigital = IsChecked(IDC_DIGITAL);
 
-    SetDlgItemInt(g_hwnd, IDC_MINS, dwMins, FALSE);
-    SetDlgItemInt(g_hwnd, IDC_SECS, dwSecs, FALSE);
+    TCHAR szTemp[50], szBuf[250] = { 0 };
 
-    TCHAR szBuf[50];
-    if (bAddToTitleBar) {
-        _sntprintf(szBuf, ARRAYLEN(szBuf), APPTITLE_FORMAT, dwMins, dwSecs);
+    DWORD dwHours = (dwDuration / 1000) / 3600;
+    DWORD dwMins = ((dwDuration / 1000) % 3600) / 60;
+    DWORD dwSecs  = (dwDuration / 1000) % 60;
+
+    if (bUsingDigital) {
+        if (dwHours) {
+            _sntprintf(szBuf, ARRAYLEN(szBuf), _T("%d:%02d:%02d"), dwHours, dwMins, dwSecs);
+        }
+        else {
+            _sntprintf(szBuf, ARRAYLEN(szBuf), _T("%d:%02d"), dwMins, dwSecs);
+        }
     }
     else {
-        _tcscpy(szBuf, APPTITLE);
+        if (dwHours) {
+            _sntprintf(szTemp, ARRAYLEN(szTemp), _T("%dh"), dwHours);
+            _tcscat(szBuf, szTemp);
+        }
+        if (dwMins) {
+            if (szBuf[0]) _tcscat(szBuf, _T(" "));
+            _sntprintf(szTemp, ARRAYLEN(szTemp), _T("%dm"), dwMins);
+            _tcscat(szBuf, szTemp);
+        }
+        if (dwSecs || !szBuf[0]) {
+            if (szBuf[0]) _tcscat(szBuf, _T(" "));
+            _sntprintf(szTemp, ARRAYLEN(szTemp), _T("%ds"), dwSecs);
+            _tcscat(szBuf, szTemp);
+        }
     }
-    SetWindowText(g_hwnd, szBuf);
+
+    SetDlgItemText(g_hwnd, IDC_TIME, szBuf);
+
+    if (bAddToTitleBar) {
+        _tcscat(szBuf, _T(" - "));
+        _tcscat(szBuf, APPTITLE);
+        SetWindowText(g_hwnd, szBuf);
+    }
+    else {
+        SetWindowText(g_hwnd, APPTITLE);
+    }
     
     if (g_bMinimizedToTray) {
         UpdateTrayIconTooltip(szBuf);
@@ -282,7 +401,7 @@ void StopTiming() {
     SetDurationText(g_dwTimerDuration, false);
     g_dwTimerStart = 0;
     g_dwTimerDuration = 0;
-    PostMessage(g_hwnd, WM_NEXTDLGCTL, (WPARAM) GetDlgItem(g_hwnd, IDC_MINS), TRUE);
+    PostMessage(g_hwnd, WM_NEXTDLGCTL, (WPARAM) GetDlgItem(g_hwnd, IDC_TIME), TRUE);
 }
 
 void StartSoundingAlarm()
@@ -457,9 +576,15 @@ BOOL OnInitDialog(HWND hwnd, WPARAM wParam)
 		AppendMenu(hMenu, MF_STRING, IDM_ABOUTBOX, ABOUTTITLE _T(" ..."));
 	}
 
-    // set focus to IDC_MINS
-    if (GetDlgCtrlID((HWND) wParam) != IDC_MINS) { 
-        SetFocus(GetDlgItem(hwnd, IDC_MINS)); 
+    // set the data items into the combobox
+    SendDlgItemMessage(hwnd, IDC_TYPE, CB_RESETCONTENT, 0, 0);
+    SendDlgItemMessage(hwnd, IDC_TYPE, CB_ADDSTRING, 0, (LPARAM) _T("Delay"));
+    SendDlgItemMessage(hwnd, IDC_TYPE, CB_ADDSTRING, 0, (LPARAM) _T("Until"));
+    SendDlgItemMessage(hwnd, IDC_TYPE, CB_SETCURSEL, 0, 0);
+
+    // set focus to control
+    if (GetDlgCtrlID((HWND) wParam) != IDC_TIME) { 
+        SetFocus(GetDlgItem(hwnd, IDC_TIME)); 
         return FALSE; 
     } 
 
@@ -546,8 +671,8 @@ BOOL OnTimer(WPARAM wParam, LPARAM lParam)
 BOOL OnEnter() 
 {
     DWORD id = GetDlgCtrlID(GetFocus());
-    if (id == IDC_MINS || id == IDC_SECS) {
-        PostMessage(g_hwnd, WM_NEXTDLGCTL, 0, 0);
+    if (id == IDC_TYPE || id == IDC_TIME) {
+        SendMessage(g_hwnd, WM_NEXTDLGCTL, 0, 0);
         return TRUE;
     }
     
@@ -565,8 +690,7 @@ BOOL OnCommand(WPARAM wParam, LPARAM lParam)
     }
 
     switch (dwControl) {
-    case IDC_MINS:
-    case IDC_SECS:
+    case IDC_TIME:
         if (dwNotify == EN_SETFOCUS) {
             SendDlgItemMessage(g_hwnd, dwControl, EM_SETSEL, 0, -1);
             return TRUE;
@@ -584,6 +708,10 @@ BOOL OnCommand(WPARAM wParam, LPARAM lParam)
             StartTiming();
         }
         return TRUE;
+
+    case IDC_DIGITAL:
+        SetDurationText(GetTimerDuration(), g_dwTimerStart != 0);
+        return FALSE;
 
     case IDOK:
         return FALSE;
@@ -615,7 +743,11 @@ BOOL OnTrayMessage(WPARAM wParam, LPARAM lParam)
 {
     UINT uIconId   = (UINT) wParam; // icon ID sending the message
     UINT uMouseMsg = (UINT) lParam; // mouse event
-    if (uMouseMsg == WM_LBUTTONDBLCLK && uIconId == IDI_GEGG) {
+    if (uIconId == IDI_GEGG && (
+        uMouseMsg == WM_LBUTTONUP || uMouseMsg == WM_LBUTTONDBLCLK ||
+        uMouseMsg == WM_RBUTTONUP || uMouseMsg == WM_RBUTTONDBLCLK 
+        )) 
+    {
         RestoreFromTray();
         return TRUE;
     }
@@ -632,7 +764,7 @@ BOOL OnSysCommand(WPARAM wParam, LPARAM lParam)
         }
     }
 
-	if ((wParam & 0xFFF0) == IDM_ABOUTBOX) {
+	if ((wParam & 0xFF00) == IDM_ABOUTBOX) {
         ShowAboutBox();
         return TRUE;
 	}
@@ -715,12 +847,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pCmdLine, 
 
     ShowWindow(g_hwnd, SW_SHOW);
 
-    SetDlgItemText(g_hwnd, IDC_MINS, _T("3"));
-    SetDlgItemText(g_hwnd, IDC_SECS, _T("0"));
+    SetDlgItemText(g_hwnd, IDC_TIME, _T("3 mins"));
 
     LoadPreferences();
 
-    SendDlgItemMessage(g_hwnd, IDC_MINS, EM_SETSEL, 0, -1);
+    SendDlgItemMessage(g_hwnd, IDC_TIME, EM_SETSEL, 0, -1);
 
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0) > 0) { 
