@@ -84,20 +84,22 @@ BEGIN
                     WS_TABSTOP,95,38,69,10
 END
 
-IDD_ABOUT DIALOGEX 0, 0, 186, 81
+IDD_ABOUT DIALOGEX 0, 0, 274, 199
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
     WS_SYSMENU
 CAPTION "About The Good Egg"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,68,60,50,14
-    ICON            IDI_GEGG,IDC_STATIC,7,7,20,20
+    DEFPUSHBUTTON   "OK",IDOK,112,178,50,14
+    ICON            IDI_GEGG,IDC_STATIC,7,7,21,20
     LTEXT           "The Good Egg",IDC_STATIC,44,7,46,8
     LTEXT           "Just a simple little countdown timer",IDC_STATIC,44,20,
                     112,8
     LTEXT           "Copyright (c) 2008 Brodie Thiesfield",IDC_STATIC,44,34,
                     115,8
     LTEXT           "http://code.jellycan.com/",IDC_APPLINK,44,43,82,8
+    LTEXT           "Usage:",IDC_STATIC,11,56,24,8
+    LTEXT           "Help text",IDC_HELPTEXT,44,56,222,113
 END
 
 
@@ -120,9 +122,9 @@ BEGIN
     IDD_ABOUT, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 179
+        RIGHTMARGIN, 267
         TOPMARGIN, 7
-        BOTTOMMARGIN, 74
+        BOTTOMMARGIN, 192
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -143,8 +145,8 @@ IDI_GEGG                ICON                    ".\\gegg.ico"
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,4,0,0
- PRODUCTVERSION 1,4,0,0
+ FILEVERSION 1,5,0,0
+ PRODUCTVERSION 1,5,0,0
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -162,12 +164,12 @@ BEGIN
             VALUE "Comments", "Simple egg timer"
             VALUE "CompanyName", "http://code.jellycan.com/"
             VALUE "FileDescription", "The Good Egg"
-            VALUE "FileVersion", "1, 4, 0, 0"
+            VALUE "FileVersion", "1, 5, 0, 0"
             VALUE "InternalName", "gegg"
             VALUE "LegalCopyright", "Copyright (C) 2008 Brodie Thiesfield"
             VALUE "OriginalFilename", "gegg.exe"
             VALUE "ProductName", "The Good Egg"
-            VALUE "ProductVersion", "1, 4, 0, 0"
+            VALUE "ProductVersion", "1, 5, 0, 0"
         END
     END
     BLOCK "VarFileInfo"
