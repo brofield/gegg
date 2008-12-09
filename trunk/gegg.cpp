@@ -764,7 +764,7 @@ BOOL OnSysCommand(WPARAM wParam, LPARAM lParam)
         }
     }
 
-	if ((wParam & 0xFF00) == IDM_ABOUTBOX) {
+	if ((wParam & 0xFFF0) == IDM_ABOUTBOX) {
         ShowAboutBox();
         return TRUE;
 	}
@@ -962,6 +962,23 @@ BOOL ConvertStaticToHyperlink(HWND hwndParent, UINT uCtrlId)
 
 INT_PTR CALLBACK AboutDialogProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 {
+    const char szHelpText[] =
+        "To set a countdown timer for a period of time, select \"Delay\" and "
+        "then enter the desired period.\n"
+        "\n"
+        "To set a countdown timer until a specific time of day, select \"Until\" "
+        "and then enter the desired time for the timer to expire. The required "
+        "delay will be automatically calculated.\n"
+        "\n"
+        "Periods can be entered using either separated time (hms) or in "
+        "digital time (HH:MM:SS). For example:\n"
+        "\n"
+        "PERIOD\t\t\t"        "Using HMS\t"     "Using HH:MM:SS\n"
+        "30 secs\t\t\t"       "\"30s\"\t\t"     "\"30\"\n"
+        "3 mins\t\t\t"        "\"3m\"\t\t"      "\"3:00\"\n"
+        "1 hour 5 mins\t\t"   "\"1h 5m\"\t\t"   "\"1:05:00\"\n"
+        ;
+
     switch (message) { 
     case WM_INITDIALOG:
         {
@@ -971,8 +988,9 @@ INT_PTR CALLBACK AboutDialogProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 
             SetWindowText(hwnd, APPTITLE);
             SetDlgItemText(hwnd, IDC_APPLINK, APPLINK);
-
             ConvertStaticToHyperlink(hwnd, IDC_APPLINK);
+
+            SetDlgItemText(hwnd, IDC_HELPTEXT, szHelpText);
 
             CenterWindow(hwnd);
         }
