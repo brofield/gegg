@@ -249,7 +249,8 @@ DWORD GetTimerDuration() {
     // until
 
     time_t tNow = time(NULL);
-    struct tm t = *localtime(&tNow);
+    struct tm t;
+    localtime_s(&t, &tNow);
 
     // allow hms, hm, h, hh:mm or hh:mm:ss.
     if (nHours == -1) { // hh:mm
@@ -272,7 +273,7 @@ DWORD GetTimerDuration() {
     }
 
     SendDlgItemMessage(g_hwnd, IDC_TYPE, CB_SETCURSEL, 0, 0);
-    return max((tUntil - tNow) * 1000, 1);
+    return (DWORD) max((tUntil - tNow) * 1000, 1);
 }
 
 void SetDurationText(DWORD dwDuration, bool bAddToTitleBar) 
@@ -287,34 +288,34 @@ void SetDurationText(DWORD dwDuration, bool bAddToTitleBar)
 
     if (bUsingDigital) {
         if (dwHours) {
-            _sntprintf(szBuf, ARRAYLEN(szBuf), _T("%d:%02d:%02d"), dwHours, dwMins, dwSecs);
+            _sntprintf_s(szBuf, ARRAYLEN(szBuf), _T("%d:%02d:%02d"), dwHours, dwMins, dwSecs);
         }
         else {
-            _sntprintf(szBuf, ARRAYLEN(szBuf), _T("%d:%02d"), dwMins, dwSecs);
+            _sntprintf_s(szBuf, ARRAYLEN(szBuf), _T("%d:%02d"), dwMins, dwSecs);
         }
     }
     else {
         if (dwHours) {
-            _sntprintf(szTemp, ARRAYLEN(szTemp), _T("%dh"), dwHours);
-            _tcscat(szBuf, szTemp);
+            _sntprintf_s(szTemp, ARRAYLEN(szTemp), _T("%dh"), dwHours);
+            _tcscat_s(szBuf, szTemp);
         }
         if (dwMins) {
-            if (szBuf[0]) _tcscat(szBuf, _T(" "));
-            _sntprintf(szTemp, ARRAYLEN(szTemp), _T("%dm"), dwMins);
-            _tcscat(szBuf, szTemp);
+            if (szBuf[0]) _tcscat_s(szBuf, _T(" "));
+            _sntprintf_s(szTemp, ARRAYLEN(szTemp), _T("%dm"), dwMins);
+            _tcscat_s(szBuf, szTemp);
         }
         if (dwSecs || !szBuf[0]) {
-            if (szBuf[0]) _tcscat(szBuf, _T(" "));
-            _sntprintf(szTemp, ARRAYLEN(szTemp), _T("%ds"), dwSecs);
-            _tcscat(szBuf, szTemp);
+            if (szBuf[0]) _tcscat_s(szBuf, _T(" "));
+            _sntprintf_s(szTemp, ARRAYLEN(szTemp), _T("%ds"), dwSecs);
+            _tcscat_s(szBuf, szTemp);
         }
     }
 
     SetDlgItemText(g_hwnd, IDC_TIME, szBuf);
 
     if (bAddToTitleBar) {
-        _tcscat(szBuf, _T(" - "));
-        _tcscat(szBuf, APPTITLE);
+        _tcscat_s(szBuf, _T(" - "));
+        _tcscat_s(szBuf, APPTITLE);
         SetWindowText(g_hwnd, szBuf);
     }
     else {
@@ -474,7 +475,7 @@ void AddTrayIcon()
     nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
     nid.uCallbackMessage = WM_GEGG_TRAYMSG;
     nid.hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_GEGG));
-    _tcscpy(nid.szTip, APPTITLE);
+    _tcscpy_s(nid.szTip, APPTITLE);
 
     Shell_NotifyIcon(NIM_ADD, &nid);
 }
@@ -547,7 +548,7 @@ void UpdateTrayIconTooltip(LPCTSTR pszTitle)
     nid.hWnd = g_hwnd;
     nid.uID = IDI_GEGG;
     nid.uFlags = NIF_TIP;
-    _tcscpy(nid.szTip, pszTitle);
+    _tcscpy_s(nid.szTip, pszTitle);
 
     Shell_NotifyIcon(NIM_MODIFY, &nid);
 }

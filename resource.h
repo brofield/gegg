@@ -17,6 +17,9 @@
 #define IDC_TYPE                        1011
 #define IDC_DIGITAL                     1012
 #define IDC_HELPTEXT                    1013
+#ifndef IDC_STATIC
+#define IDC_STATIC				        -1
+#endif
 
 // Next default values for new objects
 // 
