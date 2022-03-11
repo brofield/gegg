@@ -35,4 +35,4 @@ jobs:
       uses: actions/upload-artifact@v3.0.0
       with: 
         name: Executable
-        path: D:\a\gegg\gegg\Release\gegg.exe
+        path: ${{env.GITHUB_WORKSPACE}}\${{env.BUILD_CONFIGURATION}}\gegg.exe
